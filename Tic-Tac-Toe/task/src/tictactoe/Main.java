@@ -20,18 +20,16 @@ public class Main {
 
 	public static void PrintState() {
 		System.out.println("---------");
-		for (int i = 0; i < state.length; i++) {
-			for (int j = 0; j < state[i].length; j++) {
+		for (char[] chars : state) {
+			for (int j = 0; j < chars.length; j++) {
 				if (j == 0) {
-					System.out.print("| ");
-				} else if (j < state[i].length) {
-					System.out.print(" ");
+					System.out.print("|");
 				}
-				System.out.print(state[i][j]);
-				if (j == state[i].length - 1) {
+				System.out.print(" " + chars[j]);
+				if (j == chars.length - 1) {
 					System.out.print(" |");
 				}
-				switch (state[i][j]) {
+				switch (chars[j]) {
 					case 'X':
 						xCounter++;
 						break;
