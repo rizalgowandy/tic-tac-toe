@@ -74,23 +74,6 @@ class TicTacToeField {
         return improved;
     }
 
-    boolean differByOne(TicTacToeField other) {
-        boolean haveSingleDifference = false;
-
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                if (field[i][j] != other.field[i][j]) {
-                    if (haveSingleDifference) {
-                        return false;
-                    }
-                    haveSingleDifference = true;
-                }
-            }
-        }
-
-        return haveSingleDifference;
-    }
-
     boolean isCloseTo(TicTacToeField other) {
         return equalTo(other)
             || hasNextAs(other)
@@ -187,59 +170,118 @@ class TicTacToeField {
 
 }
 
-public class TicTacToeTest extends StageTest<String> {
+
+class Clue {
+    int x, y;
+    String input;
+    Clue(String input, int x, int y) {
+        this.input = input;
+        this.x = x;
+        this.y = y;
+    }
+}
+
+public class TicTacToeTest extends StageTest<Clue> {
     public TicTacToeTest() {
         super(Main.class);
     }
 
+    static final String[] inputs = new String[] {
+        "1 1", "1 2", "1 3",
+        "2 1", "2 2", "2 3",
+        "3 1", "3 2", "3 3"
+    };
+
+    String iterateCells(String initial) {
+        int index = -1;
+        for (int i = 0; i < inputs.length; i++) {
+            if (initial.equals(inputs[i])) {
+                index = i;
+                break;
+            }
+        }
+        if (index == -1) {
+            return "";
+        }
+        String fullInput = "";
+        for (int i = index; i < index + 9; i++) {
+            fullInput += inputs[i % inputs.length] + "\n";
+        }
+        return fullInput;
+    }
 
     @Override
-    public List<TestCase<String>> generate() {
-        List<TestCase<String>> tests = List.of(
-            new TestCase<String>()
-                .setInput("O OXXO XX"),
+    public List<TestCase<Clue>> generate() {
 
-            new TestCase<String>()
-                .setInput("OXO  X OX"),
+        List<TestCase<Clue>> tests = new ArrayList<>();
 
-            new TestCase<String>()
-                .setInput("         "),
+        int i = 0;
 
-            new TestCase<String>()
-                .setInput(" O  X   X")
-        );
+        for (String startField : new String[] {
+            "_XXOO_OX_",
+            "_________",
+            "X_X_O____"
+        }) {
 
-        for (TestCase<String> test: tests) {
-            test.setInput(test.getInput().replace(" ", "_"));
-            test.setAttach(test.getInput());
+            for (String input : inputs) {
+                String fullInput = iterateCells(input);
+
+                String[] strNums = input.split("\\s+");
+                int x = Integer.parseInt(strNums[0]);
+                int y = Integer.parseInt(strNums[1]);
+
+                if (i % 2 == 1) {
+                    // mix with incorrect data
+                    fullInput = "4 " + i + "\n" + fullInput;
+                }
+
+                tests.add(new TestCase<Clue>()
+                    .setInput(startField + "\n" + fullInput)
+                    .setAttach(new Clue(startField, x, y)));
+
+                i++;
+            }
+
         }
 
         return tests;
     }
 
     @Override
-    public CheckResult check(String reply, String clue) {
+    public CheckResult check(String reply, Clue clue) {
 
         List<TicTacToeField> fields = TicTacToeField.parseAll(reply);
 
-        if (fields.size() == 0) {
+        if (fields.size() != 2) {
             return new CheckResult(false,
-                "Can't parse the field! " +
-                    "Check if you output a field in format like in the example.");
+                "Can't find two fields inside output");
         }
 
-        if (fields.size() > 1) {
-            return new CheckResult(false,
-                "There are more than one field in the output! " +
-                    "You should output a single field.");
+        TicTacToeField curr = fields.get(0);
+        TicTacToeField next = fields.get(1);
+
+        TicTacToeField correctCurr = new TicTacToeField(clue.input);
+        TicTacToeField correctNext = new TicTacToeField(correctCurr.field);
+
+        String[] numInputs = iterateCells(clue.x + " " + clue.y).split("\n");
+        for (String input : numInputs) {
+            String[] strNums = input.split(" ");
+            int x = Integer.parseInt(strNums[0]);
+            int y = Integer.parseInt(strNums[1]);
+            if (correctNext.field[y - 1][x - 1] == FieldState.FREE) {
+                correctNext.field[y - 1][x - 1] = FieldState.X;
+                break;
+            }
         }
 
-        TicTacToeField userField = fields.get(0);
-        TicTacToeField inputField = new TicTacToeField(clue);
-
-        if (!userField.equalTo(inputField)) {
+        if (!curr.equalTo(correctCurr)) {
             return new CheckResult(false,
-                "Your field doesn't match expected field");
+                "The first field is not equal to the input field");
+        }
+
+        if (!next.equalTo(correctNext)) {
+            return new CheckResult(false,
+                "The first field is correct, but the second is not");
         }
 
         return CheckResult.correct();
